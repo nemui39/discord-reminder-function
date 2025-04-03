@@ -865,69 +865,69 @@ exports.discordReminder = async (pubSubEvent, context) => {
 
 // --- ローカルテスト用 (オプション) ---
 // ローカルで `node index.js` を実行したときに getSecrets を試す
-if (require.main === module) {
-  (async () => {
-    try {
-      // ローカルテストには Application Default Credentials (ADC) の設定が必要です
-      // gcloud auth application-default login
-      console.log('Running local test...');
-      const secrets = await getSecrets();
-      console.log('Local test secrets fetched:');
-      console.log('- Library ID:', secrets.libraryId ? 'Fetched' : 'Failed');
-      console.log('- Library Password:', secrets.libraryPassword ? 'Fetched' : 'Failed');
-      console.log('- Discord Webhook URL:', secrets.discordWebhookUrl ? 'Fetched' : 'Failed');
+// if (require.main === module) {
+//   (async () => {
+//     try {
+//       // ローカルテストには Application Default Credentials (ADC) の設定が必要です
+//       // gcloud auth application-default login
+//       console.log('Running local test...');
+//       const secrets = await getSecrets();
+//       console.log('Local test secrets fetched:');
+//       console.log('- Library ID:', secrets.libraryId ? 'Fetched' : 'Failed');
+//       console.log('- Library Password:', secrets.libraryPassword ? 'Fetched' : 'Failed');
+//       console.log('- Discord Webhook URL:', secrets.discordWebhookUrl ? 'Fetched' : 'Failed');
       
-      // ローカルでゴミ出し情報テストも追加
-      const today = new Date();
-      const tomorrow = addDays(today, 1);
-      const testGarbage = getGarbageInfo(tomorrow);
-      console.log(`Garbage info for ${format(tomorrow, 'yyyy-MM-dd')}: ${testGarbage || 'None'}`);
+//       // ローカルでゴミ出し情報テストも追加
+//       const today = new Date();
+//       const tomorrow = addDays(today, 1);
+//       const testGarbage = getGarbageInfo(tomorrow);
+//       console.log(`Garbage info for ${format(tomorrow, 'yyyy-MM-dd')}: ${testGarbage || 'None'}`);
       
-      // 図書館情報を保持する変数（Discord送信でも使うため）
-      let libReminder = null;
+//       // 図書館情報を保持する変数（Discord送信でも使うため）
+//       let libReminder = null;
       
-      // 図書館情報取得テストを追加 (ID/PWが必要)
-      if (secrets.libraryId && secrets.libraryPassword) {
-          console.log('Testing library scrape...');
-          const books = await getLibraryBooks(secrets.libraryId, secrets.libraryPassword);
-          libReminder = createLibraryReminderMessage(books, today);
-          console.log('Library Reminder Message:');
-          console.log(libReminder || 'None');
-      } else {
-          console.warn('Skipping library scrape test: ID or Password secret not found.');
-      }
+//       // 図書館情報取得テストを追加 (ID/PWが必要)
+//       if (secrets.libraryId && secrets.libraryPassword) {
+//           console.log('Testing library scrape...');
+//           const books = await getLibraryBooks(secrets.libraryId, secrets.libraryPassword);
+//           libReminder = createLibraryReminderMessage(books, today);
+//           console.log('Library Reminder Message:');
+//           console.log(libReminder || 'None');
+//       } else {
+//           console.warn('Skipping library scrape test: ID or Password secret not found.');
+//       }
       
-      // Discordメッセージ送信テスト
-      if (secrets.discordWebhookUrl) {
-          console.log('Testing Discord message sending...');
-          const testGarbageMessage = `【ゴミ出し】明日の収集 (${format(tomorrow, 'yyyy-MM-dd')}): ${testGarbage || 'ありません'}`;
+//       // Discordメッセージ送信テスト
+//       if (secrets.discordWebhookUrl) {
+//           console.log('Testing Discord message sending...');
+//           const testGarbageMessage = `【ゴミ出し】明日の収集 (${format(tomorrow, 'yyyy-MM-dd')}): ${testGarbage || 'ありません'}`;
           
-          // 図書館リマインダーメッセージの追加
-          let testLibraryMessage = '';
-          if (libReminder) {
-              testLibraryMessage = `\n\n${libReminder}`;
-          }
+//           // 図書館リマインダーメッセージの追加
+//           let testLibraryMessage = '';
+//           if (libReminder) {
+//               testLibraryMessage = `\n\n${libReminder}`;
+//           }
           
-          const testMessage = `🔔 テスト通知 (${format(today, 'yyyy-MM-dd HH:mm:ss')})\n${testGarbageMessage}${testLibraryMessage}`;
+//           const testMessage = `🔔 テスト通知 (${format(today, 'yyyy-MM-dd HH:mm:ss')})\n${testGarbageMessage}${testLibraryMessage}`;
           
-          // 送信するメッセージの内容をログに出力
-          console.log('Message to be sent to Discord:');
-          console.log(testMessage);
-          console.log('---------------------');
+//           // 送信するメッセージの内容をログに出力
+//           console.log('Message to be sent to Discord:');
+//           console.log(testMessage);
+//           console.log('---------------------');
           
-          try {
-              await sendDiscordMessage(secrets.discordWebhookUrl, testMessage);
-              console.log('Discord test message sent successfully');
-          } catch (discordError) {
-              console.error('Discord test failed:', discordError.message);
-          }
-      } else {
-          console.warn('Skipping Discord test: webhook URL not found.');
-      }
-    } catch (error) {
-      console.error('Local test failed:', error);
-    }
-  })();
-}
+//           try {
+//               await sendDiscordMessage(secrets.discordWebhookUrl, testMessage);
+//               console.log('Discord test message sent successfully');
+//           } catch (discordError) {
+//               console.error('Discord test failed:', discordError.message);
+//           }
+//       } else {
+//           console.warn('Skipping Discord test: webhook URL not found.');
+//       }
+//     } catch (error) {
+//       console.error('Local test failed:', error);
+//     }
+//   })();
+// }
 
 
