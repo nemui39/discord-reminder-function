@@ -724,29 +724,78 @@ function createLibraryReminderMessage(books, baseDate) {
     const daysUntilDue = differenceInCalendarDays(book.returnDate, baseDate);
 
     if (daysUntilDue === 3) {
-      reminders['3days'].push(book.title);
+      reminders['3days'].push({
+        title: book.title,
+        returnDate: book.returnDate
+      });
     } else if (daysUntilDue <= 1 && daysUntilDue >= 0) {
       // 当日(0日)も含める
-      reminders['1day'].push(book.title);
+      reminders['1day'].push({
+        title: book.title,
+        returnDate: book.returnDate
+      });
     }
   });
 
   let message = '';
   if (reminders['3days'].length > 0) {
     message += `【図書館】3日後に返却期限の本が ${reminders['3days'].length}冊 あります:\n`;
-    reminders['3days'].forEach(title => {
-      message += `・ ${title}\n`;
+    reminders['3days'].forEach(book => {
+      const returnDateStr = format(book.returnDate, 'yyyy/MM/dd');
+      message += `・ ${book.title} (返却期限: ${returnDateStr})\n`;
     });
     message += '\n';
   }
   if (reminders['1day'].length > 0) {
     message += `【図書館】今日/明日が返却期限の本が ${reminders['1day'].length}冊 あります:\n`;
-    reminders['1day'].forEach(title => {
-      message += `・ ${title}\n`;
+    reminders['1day'].forEach(book => {
+      const returnDateStr = format(book.returnDate, 'yyyy/MM/dd');
+      message += `・ ${book.title} (返却期限: ${returnDateStr})\n`;
     });
   }
 
   return message.trim() || null; // メッセージが空なら null を返す
+}
+
+/**
+ * Discordのウェブフックを使用してメッセージを送信する
+ * @param {string} webhookUrl Discordウェブフック URL
+ * @param {string} message 送信するメッセージ
+ * @returns {Promise<void>}
+ */
+async function sendDiscordMessage(webhookUrl, message) {
+  if (!webhookUrl) {
+    throw new Error('Discord webhook URLが設定されていません。');
+  }
+
+  if (!message || message.trim() === '') {
+    console.log('送信するメッセージがありません。');
+    return;
+  }
+
+  try {
+    console.log('Sending message to Discord...');
+    
+    // Discordの制限に合わせてメッセージを送信
+    const payload = {
+      content: message
+    };
+    
+    const response = await axios.post(webhookUrl, payload, {
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      timeout: 10000 // 10秒のタイムアウト
+    });
+    
+    console.log(`Discord message sent. Response status: ${response.status}`);
+  } catch (error) {
+    console.error('Failed to send Discord message:', error.message);
+    if (error.response) {
+      console.error('Discord API error:', error.response.status, error.response.data);
+    }
+    throw new Error('Discordへのメッセージ送信に失敗しました。');
+  }
 }
 
 // --- Cloud Functions のエントリーポイント (Pub/Sub トリガーの場合) ---
@@ -803,7 +852,7 @@ exports.discordReminder = async (pubSubEvent, context) => {
     console.log("--- Final Message ---");
     console.log(finalMessage);
     console.log("---------------------");
-    // await sendDiscordMessage(secrets.discordWebhookUrl, finalMessage); // 次のステップで実装
+    await sendDiscordMessage(secrets.discordWebhookUrl, finalMessage); // Discordメッセージ送信を有効化
 
     console.log('Function finished successfully.');
 
@@ -834,15 +883,46 @@ if (require.main === module) {
       const testGarbage = getGarbageInfo(tomorrow);
       console.log(`Garbage info for ${format(tomorrow, 'yyyy-MM-dd')}: ${testGarbage || 'None'}`);
       
+      // 図書館情報を保持する変数（Discord送信でも使うため）
+      let libReminder = null;
+      
       // 図書館情報取得テストを追加 (ID/PWが必要)
       if (secrets.libraryId && secrets.libraryPassword) {
           console.log('Testing library scrape...');
           const books = await getLibraryBooks(secrets.libraryId, secrets.libraryPassword);
-          const libReminder = createLibraryReminderMessage(books, today);
+          libReminder = createLibraryReminderMessage(books, today);
           console.log('Library Reminder Message:');
           console.log(libReminder || 'None');
       } else {
           console.warn('Skipping library scrape test: ID or Password secret not found.');
+      }
+      
+      // Discordメッセージ送信テスト
+      if (secrets.discordWebhookUrl) {
+          console.log('Testing Discord message sending...');
+          const testGarbageMessage = `【ゴミ出し】明日の収集 (${format(tomorrow, 'yyyy-MM-dd')}): ${testGarbage || 'ありません'}`;
+          
+          // 図書館リマインダーメッセージの追加
+          let testLibraryMessage = '';
+          if (libReminder) {
+              testLibraryMessage = `\n\n${libReminder}`;
+          }
+          
+          const testMessage = `🔔 テスト通知 (${format(today, 'yyyy-MM-dd HH:mm:ss')})\n${testGarbageMessage}${testLibraryMessage}`;
+          
+          // 送信するメッセージの内容をログに出力
+          console.log('Message to be sent to Discord:');
+          console.log(testMessage);
+          console.log('---------------------');
+          
+          try {
+              await sendDiscordMessage(secrets.discordWebhookUrl, testMessage);
+              console.log('Discord test message sent successfully');
+          } catch (discordError) {
+              console.error('Discord test failed:', discordError.message);
+          }
+      } else {
+          console.warn('Skipping Discord test: webhook URL not found.');
       }
     } catch (error) {
       console.error('Local test failed:', error);
