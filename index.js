@@ -71,12 +71,12 @@ function getGarbageInfo(targetDate) {
   const dayOfWeek = getDay(targetDate);     // 曜日 (0 = 日曜, 1 = 月曜, ..., 6 = 土曜)
   const dateOfMonth = getDate(targetDate);   // 日にち (1から31)
 
-  // 月の第何週かを正確に計算
-  const firstDayOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1).getDay();  // 月初日の曜日
-  const weekOfMonth = Math.ceil((dateOfMonth + firstDayOfMonth) / 7);
+  // 月の第何週かを正確に計算 (旧ロジック削除)
+  // const firstDayOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1).getDay();  // 月初日の曜日
+  // const weekOfMonth = Math.ceil((dateOfMonth + firstDayOfMonth) / 7);
 
   // デバッグ用ログ（必要に応じてコメントアウト）
-  // console.log(`Checking garbage for: ${format(targetDate, 'yyyy-MM-dd')}, DayOfWeek: ${dayOfWeek}, WeekOfMonth: ${weekOfMonth}`);
+  // console.log(`Checking garbage for: ${format(targetDate, 'yyyy-MM-dd')}, DayOfWeek: ${dayOfWeek}, DateOfMonth: ${dateOfMonth}`);
 
   // 燃えるゴミ: 水曜(3) または 土曜(6)
   if (dayOfWeek === 3 || dayOfWeek === 6) {
@@ -85,23 +85,28 @@ function getGarbageInfo(targetDate) {
 
   // 火曜日(2)の特別収集チェック
   if (dayOfWeek === 2) {
-    if (weekOfMonth === 1) {
+    // その月で何回目の火曜日かを計算
+    const tuesdayOccurrence = Math.floor((dateOfMonth - 1) / 7) + 1;
+    // console.log(`Tuesday Occurrence: ${tuesdayOccurrence}`); // デバッグ用
+
+    if (tuesdayOccurrence === 1) {
       // 第1火曜
       garbageTypes.push('ペットボトル');
       garbageTypes.push('プラスチック製容器包装');
     }
-    if (weekOfMonth === 2) {
+    if (tuesdayOccurrence === 2) {
       // 第2火曜
       garbageTypes.push('燃えないゴミ');
     }
-    if (weekOfMonth === 3) {
+    if (tuesdayOccurrence === 3) {
       // 第3火曜
       garbageTypes.push('プラスチック製容器包装');
     }
-    if (weekOfMonth === 4) {
+    if (tuesdayOccurrence === 4) {
       // 第4火曜
       garbageTypes.push('カン・ビン・小型金属・古紙・古布');
     }
+    // 注意: 第5火曜は収集なし
   }
 
   // 収集があるかチェック
