@@ -834,6 +834,9 @@ exports.discordReminder = async (pubSubEvent, context) => {
     let garbageMessage = `【ゴミ出し】明日の収集 (${targetDateStr}): ${garbageInfo || 'ありません'}`;
     console.log(garbageMessage);
 
+    // Discord へゴミ出しメッセージを送信
+    await sendDiscordMessage(secrets.discordWebhookUrl, garbageMessage);
+
     // 図書館情報取得
     let libraryMessage = null;
     try {
@@ -849,15 +852,11 @@ exports.discordReminder = async (pubSubEvent, context) => {
         libraryMessage = "【図書館】貸出情報の取得に失敗しました。"; // エラーメッセージを設定
     }
 
-    // --- TODO: メッセージ統合、Discord送信 ---
-    let finalMessage = garbageMessage;
+    // 図書館情報取得
     if (libraryMessage) {
-        finalMessage += "\n\n" + libraryMessage;
+        console.log("Sending library message separately...");
+        await sendDiscordMessage(secrets.discordWebhookUrl, libraryMessage);
     }
-    console.log("--- Final Message ---");
-    console.log(finalMessage);
-    console.log("---------------------");
-    await sendDiscordMessage(secrets.discordWebhookUrl, finalMessage); // Discordメッセージ送信を有効化
 
     console.log('Function finished successfully.');
 
