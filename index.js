@@ -831,31 +831,52 @@ exports.discordReminder = async (pubSubEvent, context) => {
 
     // --- ゴミ出し情報取得 ---
     const garbageInfo = getGarbageInfo(tomorrowInJST);
-    let garbageMessage = `【ゴミ出し】明日の収集 (${targetDateStr}): ${garbageInfo || 'ありません'}`;
-    console.log(garbageMessage);
+    if (garbageInfo) {
+      const garbageMessage = `【ゴミ出し】明日の収集 (${targetDateStr}): ${garbageInfo}`;
+      console.log(garbageMessage);
+      // Discord へゴミ出しメッセージを送信（ある時だけ）
+      await sendDiscordMessage(secrets.discordWebhookUrl, garbageMessage);
+    } else {
+      console.log('【ゴミ出し】明日の収集はありません。メッセージ送信をスキップします。');
+    }
 
-    // Discord へゴミ出しメッセージを送信
-    await sendDiscordMessage(secrets.discordWebhookUrl, garbageMessage);
-
-    // 図書館情報取得
+    // 図書館情報取得（初回）
     let libraryMessage = null;
+    let firstAttemptFailed = false;
     try {
         const books = await getLibraryBooks(secrets.libraryId, secrets.libraryPassword);
         libraryMessage = createLibraryReminderMessage(books, nowInJST); // 今日の日付を基準にリマインドを計算
         if (libraryMessage) {
             console.log('Library reminders generated.');
+            console.log("Sending library message separately...");
+            await sendDiscordMessage(secrets.discordWebhookUrl, libraryMessage);
         } else {
             console.log('No library books due soon.');
+            // 通常は何も送らない（初回成功時）
         }
     } catch (libraryError) {
-        console.error('Failed to get library info:', libraryError);
-        libraryMessage = "【図書館】貸出情報の取得に失敗しました。"; // エラーメッセージを設定
-    }
+        firstAttemptFailed = true;
+        console.error('Failed to get library info (1st attempt):', libraryError);
+        // 初回エラーは通知し、5分待って再試行
+        await sendDiscordMessage(secrets.discordWebhookUrl, '【図書館】貸出情報の取得に失敗しました。5分後に再試行します。');
+        const FIVE_MINUTES_MS = 5 * 60 * 1000;
+        await new Promise(resolve => setTimeout(resolve, FIVE_MINUTES_MS));
 
-    // 図書館情報取得
-    if (libraryMessage) {
-        console.log("Sending library message separately...");
-        await sendDiscordMessage(secrets.discordWebhookUrl, libraryMessage);
+        try {
+            const booksRetry = await getLibraryBooks(secrets.libraryId, secrets.libraryPassword);
+            const retryMessage = createLibraryReminderMessage(booksRetry, nowInJST);
+            if (retryMessage) {
+                console.log('Library reminders generated on retry.');
+                await sendDiscordMessage(secrets.discordWebhookUrl, retryMessage);
+            } else {
+                console.log('No library books due soon on retry.');
+                // 初回が失敗している場合に限り、「なし」を通知
+                await sendDiscordMessage(secrets.discordWebhookUrl, '【図書館】返却期限の本はありません。');
+            }
+        } catch (retryError) {
+            console.error('Failed to get library info on retry:', retryError);
+            await sendDiscordMessage(secrets.discordWebhookUrl, '【図書館】再試行も失敗しました。今回は諦めます。');
+        }
     }
 
     console.log('Function finished successfully.');
