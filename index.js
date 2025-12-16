@@ -60,7 +60,7 @@ async function getSecrets() {
 // --- ここからゴミ出し情報判定ロジック ---
 
 /**
- * 指定された日付（JST基準と仮定）の河内長野市小塩町のゴミ収集情報を取得する
+ * 指定された日付（JST基準と仮定）のゴミ収集情報を取得する
  * @param {Date} targetDate ゴミ収集情報を知りたい日付
  * @returns {string | null} ゴミの種類（複数ある場合は「、」で連結）、収集がない場合は null
  */
@@ -71,42 +71,39 @@ function getGarbageInfo(targetDate) {
   const dayOfWeek = getDay(targetDate);     // 曜日 (0 = 日曜, 1 = 月曜, ..., 6 = 土曜)
   const dateOfMonth = getDate(targetDate);   // 日にち (1から31)
 
-  // 月の第何週かを正確に計算 (旧ロジック削除)
-  // const firstDayOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1).getDay();  // 月初日の曜日
-  // const weekOfMonth = Math.ceil((dateOfMonth + firstDayOfMonth) / 7);
-
   // デバッグ用ログ（必要に応じてコメントアウト）
   // console.log(`Checking garbage for: ${format(targetDate, 'yyyy-MM-dd')}, DayOfWeek: ${dayOfWeek}, DateOfMonth: ${dateOfMonth}`);
 
-  // 燃えるゴミ: 水曜(3) または 土曜(6)
-  if (dayOfWeek === 3 || dayOfWeek === 6) {
+  // 燃えるゴミ: 火曜(2) または 金曜(5)
+  if (dayOfWeek === 2 || dayOfWeek === 5) {
     garbageTypes.push('燃えるゴミ');
   }
 
-  // 火曜日(2)の特別収集チェック
-  if (dayOfWeek === 2) {
-    // その月で何回目の火曜日かを計算
-    const tuesdayOccurrence = Math.floor((dateOfMonth - 1) / 7) + 1;
-    // console.log(`Tuesday Occurrence: ${tuesdayOccurrence}`); // デバッグ用
+  // 月曜日(1)の特別収集チェック
+  if (dayOfWeek === 1) {
+    // その月で何回目の月曜日かを計算
+    const mondayOccurrence = Math.floor((dateOfMonth - 1) / 7) + 1;
+    // console.log(`Monday Occurrence: ${mondayOccurrence}`); // デバッグ用
 
-    if (tuesdayOccurrence === 1) {
-      // 第1火曜
+    if (mondayOccurrence === 1) {
+      // 第1月曜
+      garbageTypes.push('プラスチック製容器包装');
+    }
+    if (mondayOccurrence === 2) {
+      // 第2月曜
+      garbageTypes.push('カン・ビン・小型金属・古紙・古布');
+    }
+    if (mondayOccurrence === 3) {
+      // 第3月曜
       garbageTypes.push('ペットボトル');
       garbageTypes.push('プラスチック製容器包装');
     }
-    if (tuesdayOccurrence === 2) {
-      // 第2火曜
+    if (mondayOccurrence === 4) {
+      // 第4月曜
       garbageTypes.push('燃えないゴミ');
+      garbageTypes.push('粗大ごみ');
     }
-    if (tuesdayOccurrence === 3) {
-      // 第3火曜
-      garbageTypes.push('プラスチック製容器包装');
-    }
-    if (tuesdayOccurrence === 4) {
-      // 第4火曜
-      garbageTypes.push('カン・ビン・小型金属・古紙・古布');
-    }
-    // 注意: 第5火曜は収集なし
+    // 注意: 第5月曜は収集なし
   }
 
   // 収集があるかチェック
