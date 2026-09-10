@@ -3,17 +3,23 @@ gcloud runでデプロイされて18時にスケジューラーが図書館の�
 
 ## 通知時刻の変更
 
-通知時刻はコードではなく Cloud Scheduler のジョブ側で決まっています（プロジェクト: `learngcp-455101`）。
+通知時刻はコードではなく Cloud Scheduler のジョブ側で決まっています。
+
+- プロジェクト: `learngcp-455101`
+- ジョブ名: `trigger-discord-reminder`（ロケーション `asia-northeast1`、有効）
+- 同名のジョブが `asia-northeast2` にもあるが、こちらは一時停止中
+- Pub/Sub トピック: `discord-reminder-topic` → Cloud Functions `discordReminder`（第2世代）
+
 時刻を変えるときは以下を実行します。
 
 ```bash
-# ジョブ名と現在のスケジュールを確認
-gcloud scheduler jobs list --project=learngcp-455101
+# 現在のスケジュールを確認
+gcloud scheduler jobs list --project=learngcp-455101 --location=asia-northeast1
 
-# 18:00 JST に変更（JOB_NAME と LOCATION は上の結果に合わせる）
-gcloud scheduler jobs update pubsub JOB_NAME \
+# 18:00 JST に変更
+gcloud scheduler jobs update pubsub trigger-discord-reminder \
   --project=learngcp-455101 \
-  --location=LOCATION \
+  --location=asia-northeast1 \
   --schedule="0 18 * * *" \
   --time-zone="Asia/Tokyo"
 ```
